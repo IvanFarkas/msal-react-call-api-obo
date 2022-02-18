@@ -1,0 +1,42 @@
+{
+  "name": "msal-react-call-api-obo",
+  "version": "1.0.0",
+  "description": "---\r page_type: sample\r description: \"This sample demonstrates how to protect a Node.js web API with Azure AD using the Passport.js library.\"\r languages:\r - javascript\r - nodejs\r products:\r - azure\r - azure-active-directory\r urlFragment: nodejs-web-api-azure-ad\r ---",
+  "author": "Ivan Farkas",
+  "license": "ISC",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IvanFarkas/msal-react-call-api-obo.git"
+  },
+  "keywords": [
+    "azure-ad",
+    "ms-identity",
+    "node",
+    "api"
+  ],
+  "bugs": {
+    "url": "https://github.com/IvanFarkas/msal-react-call-api-obo/issues"
+  },
+  "homepage": "https://github.com/IvanFarkas/msal-react-spa/blob/main/README.TOC.md",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "jest --forceExit",
+    "fix": "prettier -w \"./**/*.{js,jsx,json,ts,tsx}\""
+  },
+  "dependencies": {
+    "express": "^4.17.2",
+    "dotenv": "^16.0.0",
+    "morgan": "^1.10.0",
+    "node-fetch": "^2.6.7",
+    "passport": "^0.5.2",
+    "passport-azure-ad": "^4.3.1"
+  },
+  "devDependencies": {
+    "jest": "^27.5.1",
+    "nodemon": "^2.0.15",
+    "prettier": "^2.5.1",
+    "supertest": "^6.2.2"
+  }
+}

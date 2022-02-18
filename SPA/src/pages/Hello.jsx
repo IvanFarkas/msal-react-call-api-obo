@@ -34,7 +34,7 @@ const HelloContent = () => {
         .catch((error) => {
           console.error(error);
 
-          // in case if silent token acquisition fails, fallback to an interactive method
+          // In case if silent token acquisition fails, fallback to an interactive method
           if (error instanceof InteractionRequiredAuthError) {
             if (account && inProgress === 'none') {
               instance

@@ -53,7 +53,7 @@ The downstream web API has a [conditional access](https://docs.microsoft.com/azu
 From your shell or command line:
 
 ```console
-    git clone https://github.com/IvanFarkas/msal-react-call-api-obo.git
+git clone https://github.com/IvanFarkas/msal-react-call-api-obo.git
 ```
 
 or download and extract the repository .zip file.
@@ -65,20 +65,18 @@ or download and extract the repository .zip file.
 Locate the project root folder in a command prompt. Then:
 
 ```console
-    cd DownstreamAPI
-    npm install
+cd DownstreamAPI
+npm install
 ```
 
 ```console
-    cd ..
-    cd MiddletierAPI
-    npm install
+cd ../MiddletierAPI
+npm install
 ```
 
 ```console
-    cd ..
-    cd SPA
-    npm install
+cd ../SPA
+npm install
 ```
 
 ## Registration
@@ -300,18 +298,18 @@ Open the project in your IDE (like Visual Studio or Visual Studio Code) to confi
 Run all three projects. Open **3** separate command prompts, and type:
 
 ```console
-    cd DownstreamAPI
-    npm start
+cd DownstreamAPI
+npm start
 ```
 
 ```console
-    cd MiddletierAPI
-    npm start
+cd MiddletierAPI
+npm start
 ```
 
 ```console
-    cd SPA
-    npm start
+cd SPA
+npm start
 ```
 
 ## Explore the sample
@@ -343,50 +341,98 @@ Were we successful in addressing your learning objective? Consider taking a mome
 If the conditional access policy is not satisfied when calling the downstream web API, Azure AD will throw an error together with a claims challenge. In our middle-tier web API, we are to catch this and send it to the client SPA. This is illustrated in the middle-tier web API [index.js](./MiddletierAPI/index.js) file:
 
 ```javascript
-   try {
-      // request new token and use it to call resource API on user's behalf
-      tokenObj = await getNewAccessToken(userToken);
+try {
+  // request new token and use it to call resource API on user's behalf
+  tokenObj = await getNewAccessToken(userToken);
 
-      // check for errors
-      if (tokenObj['error_codes']) {
-            
-            /**
-             * Conditional access MFA requirement throws an AADSTS50076 error.
-             * If the user has not enrolled in MFA, an AADSTS50079 error will be thrown instead.
-             * If the user has not consented to required scopes, an AADSTS65001 error will be thrown instead.
-             * In either case, sample middle-tier API will propagate the error back to the client.
-             * For more, visit: https://docs.microsoft.com/azure/active-directory/develop/v2-conditional-access-dev-guide
-             */
-            if (tokenObj['error_codes'].includes(50076) || tokenObj['error_codes'].includes(50079) || tokenObj['error_codes'].includes(65001)) {
-               return res.status(403).json(tokenObj);
-            }
-      }
+  // check for errors
+  if (tokenObj['error_codes']) {
+    /**
+     * Conditional access MFA requirement throws an AADSTS50076 error.
+     * If the user has not enrolled in MFA, an AADSTS50079 error will be thrown instead.
+     * If the user has not consented to required scopes, an AADSTS65001 error will be thrown instead.
+     * In either case, sample middle-tier API will propagate the error back to the client.
+     * For more, visit: https://docs.microsoft.com/azure/active-directory/develop/v2-conditional-access-dev-guide
+     */
+    if (tokenObj['error_codes'].includes(50076) || tokenObj['error_codes'].includes(50079) || tokenObj['error_codes'].includes(65001)) {
+      return res.status(403).json(tokenObj);
+    }
+  }
 
-      try {
-            // access the resource with the token
-            let apiResponse = await callResourceAPI(tokenObj['access_token'], config.resources.downstreamAPI.resourceUri);
-            return res.status(200).json(apiResponse);
-      } catch (error) {
-            console.error(error);
-            return res.status(403).json(error);
-      }
-      
-   } catch (error) {
-      console.error(error);
-      return res.status(403).json(error);
-   }
+  try {
+    // Access the resource with the token
+    const apiResponse = await callResourceAPI(tokenObj['access_token'], config.resources.downstreamAPI.resourceUri);
+
+    return res.status(200).json(apiResponse);
+  } catch (error) {
+    console.error(error);
+    return res.status(403).json(error);
+  }
+} catch (error) {
+  console.error(error);
+  return res.status(403).json(error);
+}
 ```
 
 Then, in the SPA project, we catch this error response and initiate an interactive token request with additional claims. To do so, we append the JSON object from the response to our [tokenRequest](./SPA/src/authConfig.js) object before triggering the interactive token request. This is illustrated in [api.js](./SPA/src/fetch.js):
 
 ```javascript
-   
+return fetch(apiEndpoint, options)
+  .then((response) => response.json())
+  .then((response) => {
+    return new Promise((resolve, reject) => {
+      // Check for any errors
+      if (response['error_codes']) {
+        /**
+         * Conditional access MFA requirement throws an AADSTS50076 error.
+         * If the user has not enrolled in MFA, an AADSTS50079 error will be thrown instead.
+         * If this occurs, sample middle-tier API will propagate this to client
+         * For more, visit: https://docs.microsoft.com/azure/active-directory/develop/v2-conditional-access-dev-guide
+         */
+        if (response['error_codes'].includes(50076) || response['error_codes'].includes(50079)) {
+          // Stringified JSON claims challenge
+          reject(response['claims']);
+
+          /**
+           * If the user has not consented to the required scopes, an AADSTS65001 error will be thrown.
+           */
+        } else if (response['error_codes'].includes(65001)) {
+          reject();
+        }
+      } else {
+        resolve(response);
+      }
+    });
+  });
 ```
 
-In the component:
+In the [Hello.jsx](./SPA/src/pages/Hello.jsx) component:
 
 ```javascript
-   
+.catch((error) => {
+  console.error(error);
+
+  // In case if silent token acquisition fails, fallback to an interactive method
+  if (error instanceof InteractionRequiredAuthError) {
+    if (account && inProgress === 'none') {
+      instance
+        .acquireTokenPopup({
+          scopes: protectedResources.apiHello.scopes,
+          claims: error ? error.message : null,
+        })
+        .then(async (response) => {
+          try {
+            const fetchResponse = await callApiWithToken(response.accessToken, protectedResources.apiHello.endpoint);
+
+            setHelloData(fetchResponse);
+          } catch (error) {
+            console.error(error);
+          }
+        })
+        .catch((error) => console.error(error));
+    }
+  }
+});
 ```
 
 ## More information

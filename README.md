@@ -345,7 +345,7 @@ try {
   // request new token and use it to call resource API on user's behalf
   tokenObj = await getNewAccessToken(userToken);
 
-  // check for errors
+  // Check for errors
   if (tokenObj['error_codes']) {
     /**
      * Conditional access MFA requirement throws an AADSTS50076 error.
